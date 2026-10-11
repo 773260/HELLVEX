@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HELLVEX - Carrito de Compras</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Poppins:wght@300;400;600&family=Syne:wght@700&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .payment-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); z-index: 2000;
+            justify-content: center; align-items: center; padding: 20px;
+        }
+        .payment-modal-content {
+            background-color: var(--card-bg); color: var(--text-color);
+            border-radius: var(--border-radius); max-width: 500px; width: 100%;
+            position: relative; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center;
+        }
+        .payment-info-box {
+            background: rgba(128, 128, 128, 0.08); border: 1px dashed var(--accent-color);
+            padding: 20px; border-radius: var(--border-radius); margin: 20px 0; text-align: left;
+        }
+        .whatsapp-btn {
+            display: inline-block; background-color: #25d366; color: white;
+            padding: 12px 25px; border-radius: var(--border-radius); text-decoration: none;
+            font-weight: bold; margin-top: 15px; width: 100%;
+        }
+        .checkout-form {
+            background-color: var(--card-bg); padding: 25px;
+            border-radius: var(--border-radius); box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 20px;
+        }
+        .checkout-form input, .checkout-form select {
+            width: 100%; padding: 10px; margin-bottom: 12px;
+            border: 1px solid var(--primary-color); border-radius: var(--border-radius);
+            background: transparent; color: var(--text-color); font-size: 14px;
+        }
+        .cart-qty-btn {
+            background: transparent; border: 1px solid var(--primary-color);
+            width: 25px; height: 25px; font-weight: bold; cursor: pointer;
+            border-radius: var(--border-radius); color: var(--text-color);
+        }
+        .free-shipping-bar {
+            background-color: var(--card-bg); padding: 15px; border-radius: var(--border-radius);
+            margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); font-size: 14px; font-weight: 600;
+        }
+        .progress-container {
+            background: rgba(128,128,128,0.2); border-radius: 10px; height: 10px; width: 100%; margin-top: 8px; overflow: hidden;
+        }
+        .progress-fill { background-color: var(--accent-color); height: 100%; width: 0%; transition: width 0.4s ease; }
+        .shipping-calculator-box {
+            background-color: var(--card-bg); padding: 20px; border-radius: var(--border-radius);
+            margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        #toastNotification {
+            position: fixed; bottom: 30px; right: 30px; background-color: var(--card-bg);
+            color: var(--text-color); border: 2px solid var(--accent-color); padding: 12px 20px;
+            border-radius: var(--border-radius); box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            display: flex; align-items: center; gap: 10px; z-index: 3000; opacity: 0; visibility: hidden;
+            transform: translateY(20px); transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        #toastNotification.show { opacity: 1; visibility: visible; transform: translateY(0); }
+    </style>
+</head>
+<body class="theme-minimal">
+
+    <div id="toastNotification">
+        <span class="toast-icon">✨</span>
+        <div class="toast-text" id="toastMessage">¡Acción realizada con éxito!</div>
+    </div>
+
+    <header>
+        <div class="logo">HELLVEX</div>
+        <nav>
+            <select id="currencySelector" class="currency-selector-header" onchange="changeCurrency()">
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="COP">COP ($)</option>
+            </select>
+            <a href="index.html">Volver a la Tienda</a>
+        </nav>
+    </header>
+
+    <div class="container" style="max-width: 900px; margin-top: 40px;">
+        <h2 class="section-title">Tu Carrito de Compras</h2>
+        
+        <div id="freeShippingBanner" class="free-shipping-bar" style="display: none;">
+            <span id="freeShippingText"></span>
+            <div class="progress-container">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+        </div>
+
+        <!-- SIMULADOR RÁPIDO DE ENVÍO -->
+        <div class="shipping-calculator-box">
+            <h3 style="font-size: 16px; margin-bottom: 10px; font-family: var(--font-title);">🚚 Calculadora Rápida de Envío</h3>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <select id="cityEstimator" onchange="calculateShippingEstimate()" style="flex: 1; padding: 8px; border-radius: var(--border-radius); border: 1px solid var(--primary-color); background: transparent; color: var(--text-color);">
+                    <option value="villavicencio">Villavicencio (Local - 1 día)</option>
+                    <option value="bogota">Bogotá D.C. (1 a 2 días)</option>
+                    <option value="medellin">Medellín / Cali / Barranquilla (2 a 3 días)</option>
+                    <option value="otras">Otras ciudades de Colombia (3 a 5 días)</option>
+                    <option value="internacional">Envío Internacional (5 a 10 días)</option>
+                </select>
+            </div>
+            <p id="estimateResult" style="font-size: 13px; font-weight: 600; margin-top: 8px; color: var(--accent-color);"></p>
+        </div>
+
+        <div id="cartContainer" style="display: flex; flex-direction: column; gap: 20px;"></div>
+
+        <div id="shippingFormContainer" class="checkout-form" style="display: none; margin-top: 30px;">
+            <h3 style="font-family: var(--font-title); font-size: 18px; margin-bottom: 15px;">Datos para el Envío</h3>
+            <input type="text" id="clientName" placeholder="Nombre completo" required>
+            <input type="text" id="clientPhone" placeholder="Teléfono / Celular" required>
+            <input type="text" id="clientAddress" placeholder="Dirección exacta de entrega" required>
+            <input type="text" id="clientCity" placeholder="Ciudad / Municipio" required>
+            
+            <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 5px;">Método de Envío:</label>
+            <select id="shippingMethod" onchange="loadCart()">
+                <option value="standard">Envío Estándar (3 a 5 días)</option>
+                <option value="express">Envío Exprés (1 a 2 días)</option>
+            </select>
+        </div>
+
+        <div id="cartSummary" style="margin-top: 20px; padding: 25px; background-color: var(--card-bg); border-radius: var(--border-radius); text-align: right; display: none; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <input type="text" id="couponInput" placeholder="Código de cupón (Ej: HELLVEX10)" style="flex: 1; padding: 8px; border: 1px solid var(--primary-color); border-radius: var(--border-radius); background: transparent; color: var(--text-color);">
+                <button onclick="applyCoupon()" style="background-color: var(--primary-color); color: #fff; border: none; padding: 8px 15px; border-radius: var(--border-radius); cursor: pointer; font-weight: 600;">Aplicar Cupón</button>
+            </div>
+            <p id="couponMsg" style="font-size: 12px; color: var(--accent-color); margin-bottom: 10px; text-align: left; display: none;"></p>
+
+            <p id="cartSubtotal" style="font-size: 16px; margin-bottom: 5px;">Subtotal: 0</p>
+            <p id="cartDiscount" style="font-size: 16px; margin-bottom: 5px; color: #27ae60; display: none;">Descuento: 0</p>
+            <p id="cartShipping" style="font-size: 16px; margin-bottom: 15px;">Envío: 0</p>
+            <h3 id="cartTotal" style="font-size: 22px; margin-bottom: 20px; color: var(--accent-color);">Total: 0</h3>
+            <button onclick="openPaymentModal()" class="btn-shop">Proceder al Pago</button>
+            <button onclick="clearCart()" style="background: transparent; border: 2px solid #ff3366; color: #ff3366; padding: 12px 20px; border-radius: var(--border-radius); margin-left: 10px; cursor: pointer; font-weight: 600;">Vaciar Carrito</button>
+        </div>
+    </div>
+
+    <div id="paymentModal" class="payment-modal">
+        <div class="payment-modal-content">
+            <span class="close-btn" onclick="closePaymentModal()" style="position: absolute; top: 12px; right: 18px; font-size: 24px; cursor: pointer;">&times;</span>
+            <h2 style="font-family: var(--font-title); margin-bottom: 10px;">Método de Pago</h2>
+            <p id="paymentInstructions" style="font-size: 14px; opacity: 0.8; margin-bottom: 10px;"></p>
+            
+            <div class="payment-info-box">
+                <p><strong>Moneda seleccionada:</strong> <span id="modalCurrencyName" style="font-weight: bold;">USD</span></p>
+                <p id="paymentAccountDetails"></p>
+                <p id="modalTotalPrice" style="margin-top: 10px; font-weight: bold;"></p>
+            </div>
+
+            <p style="font-size: 13px; line-height: 1.5; margin-bottom: 15px;">Realiza la transferencia y haz clic en el botón para confirmar por WhatsApp.</p>
+            <a id="whatsappLink" href="#" target="_blank" class="whatsapp-btn">Enviar pedido por WhatsApp 📱</a>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 HELLVEX. Todos los derechos reservados.</p>
+    </footer>
+
+    <script>
+        const savedTheme = localStorage.getItem('storeTheme') || 'theme-minimal';
+        document.body.className = savedTheme;
+
+        const rates = {
+            USD: { symbol: "$", rate: 1, name: "Dólares (USD)", standardShipping: 5.00, expressShipping: 8.00 },
+            EUR: { symbol: "€", rate: 0.92, name: "Euros (EUR)", standardShipping: 4.50, expressShipping: 7.30 },
+            COP: { symbol: "$", rate: 4100, name: "Pesos Colombianos (COP)", standardShipping: 20000, expressShipping: 32000 }
+        };
+
+        let currentCurrency = localStorage.getItem('storeCurrency') || 'USD';
+        document.getElementById('currencySelector').value = currentCurrency;
+
+        const cartContainer = document.getElementById('cartContainer');
+        const shippingFormContainer = document.getElementById('shippingFormContainer');
+        const cartSummary = document.getElementById('cartSummary');
+        const cartSubtotal = document.getElementById('cartSubtotal');
+        const cartDiscount = document.getElementById('cartDiscount');
+        const cartShipping = document.getElementById('cartShipping');
+        const cartTotal = document.getElementById('cartTotal');
+        const freeShippingBanner = document.getElementById('freeShippingBanner');
+        const freeShippingText = document.getElementById('freeShippingText');
+        const progressFill = document.getElementById('progressFill');
+
+        let currentTotalValueUSD = 0;
+        let currentTotalFormatted = "";
+        let discountPercent = 0;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if(localStorage.getItem('clientName')) document.getElementById('clientName').value = localStorage.getItem('clientName');
+            if(localStorage.getItem('clientPhone')) document.getElementById('clientPhone').value = localStorage.getItem('clientPhone');
+            if(localStorage.getItem('clientAddress')) document.getElementById('clientAddress').value = localStorage.getItem('clientAddress');
+            if(localStorage.getItem('clientCity')) document.getElementById('clientCity').value = localStorage.getItem('clientCity');
+            calculateShippingEstimate();
+        });
+
+        function changeCurrency() {
+            currentCurrency = document.getElementById('currencySelector').value;
+            localStorage.setItem('storeCurrency', currentCurrency);
+            updateShippingOptionsText();
+            calculateShippingEstimate();
+            loadCart();
+            showToast(`Moneda cambiada a ${currentCurrency}`);
+        }
+
+        function calculateShippingEstimate() {
+            let city = document.getElementById('cityEstimator').value;
+            let resultP = document.getElementById('estimateResult');
+            
+            if (city === 'villavicencio') {
+                resultP.innerText = `Estimado para Villavicencio: Entrega local exprés por $12.000 COP (~1 día hábil).`;
+            } else if (city === 'bogota') {
+                resultP.innerText = `Estimado para Bogotá: $18.000 COP por Envío Estándar (1-2 días hábiles).`;
+            } else if (city === 'medellin') {
+                resultP.innerText = `Estimado para Ciudades Principales: $20.000 COP por Envío Estándar (2-3 días hábiles).`;
+            } else if (city === 'internacional') {
+                resultP.innerText = `Estimado Internacional: $15.00 USD mediante DHL/FedEx Express (5-10 días).`;
+            } else {
+                resultP.innerText = `Estimado Nacional: $20.000 COP por Envío Estándar (3-5 días hábiles).`;
+            }
+        }
+
+        function updateShippingOptionsText() {
+            let currencyInfo = rates[currentCurrency];
+            let stdCost = currentCurrency === 'COP' ? `$ ${Math.round(currencyInfo.standardShipping).toLocaleString()} COP` : `${currencyInfo.symbol}${currencyInfo.standardShipping.toFixed(2)} ${currentCurrency}`;
+            let expCost = currentCurrency === 'COP' ? `$ ${Math.round(currencyInfo.expressShipping).toLocaleString()} COP` : `${currencyInfo.symbol}${currencyInfo.expressShipping.toFixed(2)} ${currentCurrency}`;
+
+            const select = document.getElementById('shippingMethod');
+            select.options[0].text = `Envío Estándar (${stdCost} - 3 a 5 días)`;
+            select.options[1].text = `Envío Exprés (${expCost} - 1 a 2 días)`;
+        }
+
+        function formatMoney(amountUSD) {
+            let currencyInfo = rates[currentCurrency];
+            let converted = amountUSD * currencyInfo.rate;
+            if (currentCurrency === 'COP') {
+                return `${currencyInfo.symbol} ${Math.round(converted).toLocaleString()} COP`;
+            } else {
+                return `${currencyInfo.symbol}${converted.toFixed(2)} ${currentCurrency}`;
+            }
+        }
+
+        function loadCart() {
+            updateShippingOptionsText();
+            let cart = JSON.parse(localStorage.getItem('cartProducts')) || [];
+
+            if (cart.length > 0) {
+                cartContainer.innerHTML = '';
+                let subtotalUSD = 0;
+
+                cart.forEach((product, index) => {
+                    let priceNumUSD = product.priceUSD !== undefined ? product.priceUSD : parseFloat((product.price || "13.50").replace('$', ''));
+                    let qty = product.quantity || 1;
+                    subtotalUSD += priceNumUSD * qty;
+
+                    cartContainer.innerHTML += `
+                        <div style="background-color: var(--card-bg); border-radius: var(--border-radius); padding: 20px; display: flex; gap: 20px; align-items: center; box-shadow: 0 5px 15px rgba(0,0,0,0.05); flex-wrap: wrap;">
+                            <img src="${product.image}" alt="${product.title}" style="width: 100px; height: 120px; object-fit: cover; border-radius: var(--border-radius);">
+                            <div style="flex: 1; min-width: 200px;">
+                                <h3 style="font-family: var(--font-title); font-size: 18px; margin-bottom: 5px;">${product.title}</h3>
+                                <p style="font-size: 14px; opacity: 0.8; margin-bottom: 4px;">Talla: <strong style="color: var(--accent-color);">${product.size}</strong></p>
+                                <p style="font-size: 15px; color: var(--accent-color); font-weight: bold; margin-bottom: 8px;">${formatMoney(priceNumUSD)} c/u</p>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-size: 13px; font-weight: 600;">Cant:</span>
+                                    <button class="cart-qty-btn" onclick="updateItemQty(${index}, -1)">-</button>
+                                    <span style="font-weight: 600; font-size: 14px;">${qty}</span>
+                                    <button class="cart-qty-btn" onclick="updateItemQty(${index}, 1)">+</button>
+                                </div>
+                            </div>
+                            <button onclick="removeItem(${index})" style="background: transparent; border: none; color: #ff3366; cursor: pointer; font-weight: 600; padding: 8px 12px;">Eliminar</button>
+                        </div>
+                    `;
+                });
+
+                let goalUSD = 60;
+                let percent = (subtotalUSD / goalUSD) * 100;
+                if (percent > 100) percent = 100;
+                progressFill.style.width = percent + '%';
+                freeShippingBanner.style.display = 'block';
+
+                let shippingUSD = 0;
+                if (subtotalUSD >= goalUSD) {
+                    freeShippingText.innerText = `🎉 ¡Felicidades! Has conseguido Envío Gratis.`;
+                } else {
+                    let missingUSD = (goalUSD - subtotalUSD);
+                    freeShippingText.innerText = `📦 Agrega ${formatMoney(missingUSD)} más para desbloquear Envío Gratis.`;
+                    let method = document.getElementById('shippingMethod').value;
+                    let currencyInfo = rates[currentCurrency];
+                    let rawShipping = method === 'express' ? currencyInfo.expressShipping : currencyInfo.standardShipping;
+                    shippingUSD = rawShipping / currencyInfo.rate;
+                }
+
+                let discountUSD = subtotalUSD * discountPercent;
+                let discountedSubtotalUSD = subtotalUSD - discountUSD;
+                let totalUSD = discountedSubtotalUSD + shippingUSD;
+                currentTotalValueUSD = totalUSD;
+                currentTotalFormatted = formatMoney(totalUSD);
+
+                cartSubtotal.innerText = `Subtotal: ${formatMoney(subtotalUSD)}`;
+                if (discountPercent > 0) {
+                    cartDiscount.style.display = 'block';
+                    cartDiscount.innerText = `Descuento (${discountPercent * 100}%): -${formatMoney(discountUSD)}`;
+                } else {
+                    cartDiscount.style.display = 'none';
+                }
+
+                cartShipping.innerText = shippingUSD === 0 ? `Envío: ¡GRATIS! 🎉` : `Envío: ${formatMoney(shippingUSD)}`;
+                cartTotal.innerText = `Total: ${currentTotalFormatted}`;
+                
+                shippingFormContainer.style.display = 'block';
+                cartSummary.style.display = 'block';
+            } else {
+                cartContainer.innerHTML = `<div style="text-align: center; padding: 50px; opacity: 0.8;"><p style="font-size: 18px; margin-bottom: 20px;">Tu carrito está vacío.</p><a href="index.html" class="btn-shop" style="text-decoration: none; display: inline-block;">Ir a Comprar</a></div>`;
+                freeShippingBanner.style.display = 'none';
+                shippingFormContainer.style.display = 'none';
+                cartSummary.style.display = 'none';
+            }
+        }
+
+        function applyCoupon() {
+            const code = document.getElementById('couponInput').value.trim().toUpperCase();
+            const msg = document.getElementById('couponMsg');
+            msg.style.display = 'block';
+            if (code === 'HELLVEX10') {
+                discountPercent = 0.10;
+                msg.style.color = '#27ae60'; msg.innerText = '¡Cupón aplicado con éxito! 10% de descuento.';
+                showToast('Cupón aplicado correctamente'); loadCart();
+            } else {
+                discountPercent = 0; msg.style.color = '#ff3366'; msg.innerText = 'Código de cupón inválido.';
+                showToast('Cupón inválido'); loadCart();
+            }
+        }
+
+        function updateItemQty(index, change) {
+            let cart = JSON.parse(localStorage.getItem('cartProducts')) || [];
+            cart[index].quantity = (cart[index].quantity || 1) + change;
+            if (cart[index].quantity < 1) cart[index].quantity = 1;
+            localStorage.setItem('cartProducts', JSON.stringify(cart));
+            loadCart();
+        }
+
+        function removeItem(index) {
+            let cart = JSON.parse(localStorage.getItem('cartProducts')) || [];
+            cart.splice(index, 1);
+            localStorage.setItem('cartProducts', JSON.stringify(cart));
+            loadCart();
+        }
+
+        function clearCart() { localStorage.removeItem('cartProducts'); loadCart(); }
+
+        function showToast(message) {
+            const toast = document.getElementById('toastNotification');
+            document.getElementById('toastMessage').innerText = message;
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 3000);
+        }
+
+        function openPaymentModal() {
+            const name = document.getElementById('clientName').value.trim();
+            const phone = document.getElementById('clientPhone').value.trim();
+            const address = document.getElementById('clientAddress').value.trim();
+            const city = document.getElementById('clientCity').value.trim();
+
+            if (!name || !phone || !address || !city) {
+                alert('Por favor completa todos los datos de envío antes de proceder al pago.');
+                return;
+            }
+
+            localStorage.setItem('clientName', name); localStorage.setItem('clientPhone', phone);
+            localStorage.setItem('clientAddress', address); localStorage.setItem('clientCity', city);
+
+            const shippingMethodText = document.getElementById('shippingMethod').options[document.getElementById('shippingMethod').selectedIndex].text;
+            document.getElementById('modalCurrencyName').innerText = rates[currentCurrency].name;
+            
+            if (currentCurrency === 'COP') {
+                document.getElementById('paymentInstructions').innerText = "Pago disponible mediante Nequi o transferencia bancaria local:";
+                document.getElementById('paymentAccountDetails').innerHTML = '<strong>Plataforma:</strong> Nequi<br><strong>Número:</strong> <span style="color: var(--accent-color); font-weight: bold;">305-375-9623</span><br><strong>A nombre de:</strong> ju##-for###';
+            } else {
+                document.getElementById('paymentInstructions').innerText = "Pago internacional disponible:";
+                document.getElementById('paymentAccountDetails').innerHTML = '<strong>Método:</strong> PayPal / Transferencia<br><strong>Contacto:</strong> <span style="color: var(--accent-color); font-weight: bold;">pagos@hellvex.com</span>';
+            }
+
+            document.getElementById('modalTotalPrice').innerText = `Total a pagar: ${currentTotalFormatted}`;
+            
+            let cart = JSON.parse(localStorage.getItem('cartProducts')) || [];
+            let productsList = cart.map(p => `- ${p.title} (Talla: ${p.size}) [Cant: ${p.quantity || 1}]`).join('%0A');
+            let mensaje = `Hola, quiero confirmar mi pedido en HELLVEX.%0A%0A*Moneda:* ${currentCurrency}%0A*Datos del cliente:*%0ANombre: ${name}%0ATelefono: ${phone}%0ADireccion: ${address}, ${city}%0A%0A*Método de Envío:* ${shippingMethodText}%0A%0A*Productos:*%0A${productsList}%0A*Total con envío:* ${currentTotalFormatted}%0A%0AAdjunto el comprobante de pago.`;
+            
+            document.getElementById('whatsappLink').href = `https://wa.me/573053759623?text=${mensaje}`;
+            document.getElementById('paymentModal').style.display = 'flex';
+        }
+
+        function closePaymentModal() { document.getElementById('paymentModal').style.display = 'none'; }
+        loadCart();
+    </script>
+</body>
+</html>

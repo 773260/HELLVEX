@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HELLVEX - Tienda de Ropa</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Poppins:wght@300;400;600&family=Syne:wght@700&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .announcement-bar {
+            background-color: var(--primary-color);
+            color: #fff;
+            text-align: center;
+            padding: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .store-controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .category-filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: transparent;
+            border: 1px solid var(--primary-color);
+            padding: 6px 14px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn.active, .filter-btn:hover {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+
+        .search-box {
+            padding: 8px 14px;
+            border: 1px solid var(--primary-color);
+            border-radius: var(--border-radius);
+            font-size: 13px;
+            outline: none;
+            background: transparent;
+            color: var(--text-color);
+            width: 220px;
+        }
+
+        .wishlist-heart-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(0,0,0,0.5);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            z-index: 10;
+            transition: all 0.3s ease;
+        }
+
+        .wishlist-heart-btn.active {
+            background: #ff3366;
+            color: #fff;
+        }
+
+        .product-card { position: relative; }
+
+        .cart-badge {
+            background-color: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 11px;
+            margin-left: 5px;
+            vertical-align: middle;
+        }
+
+        #toastNotification {
+            position: fixed;
+            bottom: 30px; right: 30px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border: 2px solid var(--accent-color);
+            padding: 12px 20px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            display: flex; align-items: center; gap: 10px;
+            z-index: 3000; opacity: 0; visibility: hidden;
+            transform: translateY(20px);
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        #toastNotification.show { opacity: 1; visibility: visible; transform: translateY(0); }
+        .toast-icon { font-size: 18px; color: var(--accent-color); }
+        .toast-text { font-size: 13px; font-weight: 600; }
+
+        .size-box {
+            border: 1px solid var(--primary-color);
+            padding: 5px 12px;
+            border-radius: var(--border-radius);
+            font-size: 13px; font-weight: bold;
+            cursor: pointer; display: inline-block;
+            text-align: center; background: transparent;
+            color: var(--text-color);
+        }
+        .size-box.selected { background-color: var(--primary-color); color: #fff; border-color: var(--primary-color); }
+    </style>
+</head>
+<body class="theme-minimal">
+
+    <div class="announcement-bar">
+        ✨ ¡Nuevos diseños disponibles en HELLVEX! Envío gratis en compras mayores a $60 USD.
+    </div>
+
+    <div id="toastNotification">
+        <span class="toast-icon">✨</span>
+        <div class="toast-text" id="toastMessage">¡Producto añadido al carrito con éxito!</div>
+    </div>
+
+    <div class="theme-switcher">
+        <span>Selecciona un diseño de tienda:</span>
+        <button class="theme-btn active" onclick="setTheme('theme-minimal')">Minimalista</button>
+        <button class="theme-btn" onclick="setTheme('theme-urban')">Urbano / Streetwear</button>
+        <button class="theme-btn" onclick="setTheme('theme-pastel')">Boutique Pastel</button>
+    </div>
+
+    <header>
+        <div class="logo">HELLVEX</div>
+        <nav>
+            <select id="headerCurrencySelector" class="currency-selector-header" onchange="changeGlobalCurrency()">
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="COP">COP ($)</option>
+            </select>
+            <a href="#catalogo">Catálogo</a>
+            <a href="javascript:void(0)" onclick="toggleWishlistFilter()" style="font-weight: 600;">❤️ Favoritos (<span id="wishlistCounter">0</span>)</a>
+            <a href="carrito.html" style="font-weight: bold; color: var(--accent-color);">🛒 Ver Carrito <span id="cartCounter" class="cart-badge">0</span></a>
+        </nav>
+    </header>
+
+    <section class="hero" id="coleccion">
+        <h1>Nueva Colección de Temporada</h1>
+        <p>Descubre las últimas tendencias en moda diseñadas para resaltar tu estilo único y personalidad.</p>
+        <a href="#catalogo" class="btn-shop" style="text-decoration: none; display: inline-block;">Ver Colección</a>
+    </section>
+
+    <div class="container" id="catalogo">
+        <h2 class="section-title" id="catalogTitle">Nuevos Ingresos</h2>
+        
+        <div class="store-controls">
+            <div class="category-filters">
+                <button class="filter-btn active" onclick="filterProducts('all', event)">Todos</button>
+                <button class="filter-btn" onclick="filterProducts('camisetas', event)">Camisetas / Diseños</button>
+            </div>
+            <input type="text" id="searchInput" class="search-box" placeholder="Buscar producto..." onkeyup="searchProducts()">
+        </div>
+
+        <div class="products-grid" id="productsGrid"></div>
+    </div>
+
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <div class="modal-body">
+                <div class="modal-img-container">
+                    <img id="modalImg" src="" alt="Producto" class="modal-img">
+                </div>
+                <div class="modal-details">
+                    <h2 id="modalTitle"></h2>
+                    <p id="modalPrice" class="modal-price"></p>
+                    <p id="modalDesc" class="modal-description"></p>
+                    
+                    <div class="modal-sizes" style="margin-bottom: 15px;">
+                        <span style="font-size: 13px; font-weight: 600;">Selecciona tu Talla:</span>
+                        <div class="size-boxes" style="display: flex; gap: 8px; margin-top: 6px;">
+                            <span class="size-box" onclick="selectSize('S')" id="size-S">S</span>
+                            <span class="size-box" onclick="selectSize('M')" id="size-M">M</span>
+                            <span class="size-box" onclick="selectSize('L')" id="size-L">L</span>
+                            <span class="size-box" onclick="selectSize('XL')" id="size-XL">XL</span>
+                        </div>
+                    </div>
+
+                    <div style="font-size: 13px; font-weight: 600; margin-bottom: 5px;">Cantidad:</div>
+                    <div class="quantity-control" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <button class="qty-btn" onclick="changeQty(-1)" style="width:30px; height:30px; cursor:pointer;">-</button>
+                        <span id="modalQty" style="font-weight:600;">1</span>
+                        <button class="qty-btn" onclick="changeQty(1)" style="width:30px; height:30px; cursor:pointer;">+</button>
+                    </div>
+
+                    <button class="btn-shop" id="modalAddToCart" style="width: 100%; padding: 12px; font-size: 13px;">Añadir al Carrito</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 HELLVEX. Todos los derechos reservados.</p>
+    </footer>
+
+    <script>
+        const savedTheme = localStorage.getItem('storeTheme') || 'theme-minimal';
+        document.body.className = savedTheme;
+
+        const rates = {
+            USD: { symbol: "$", rate: 1 },
+            EUR: { symbol: "€", rate: 0.92 },
+            COP: { symbol: "$", rate: 4100 }
+        };
+
+        let currentCurrency = localStorage.getItem('storeCurrency') || 'USD';
+        document.getElementById('headerCurrencySelector').value = currentCurrency;
+
+        const products = [
+            { id: 1, title: "Diseño 1 - Dragón Abstracto", priceUSD: 13.50, category: "camisetas", image: "Dragon Abstracto-blanco.jpeg", description: "Diseño 1 - Dragón Abstracto. Estilo: Minimal / Futurista / Urbano. Confeccionada con altos estándares de calidad HELLVEX." },
+            { id: 2, title: "Diseño 2 - Fragmentos", priceUSD: 13.50, category: "camisetas", image: "Fragmentos-blanco.jpeg", description: "Diseño 2 - Fragmentos. Estilo: Gráfico / Arte / Oscuro. Confeccionada con altos estándares de calidad HELLVEX." },
+            { id: 3, title: "Diseño 3 - Mundo Roto", priceUSD: 13.50, category: "camisetas", image: "Mundo Roto-blanco.jpeg", description: "Diseño 3 - Mundo Roto. Estilo: Urbano / Conceptual. Confeccionada con altos estándares de calidad HELLVEX." },
+            { id: 4, title: "Diseño 4 - Realidad Alterna", priceUSD: 13.50, category: "camisetas", image: "Realidad Alterna-blanco.jpeg", description: "Diseño 4 - Realidad Alterna. Estilo: Surrealista / Moderno. Confeccionada con altos estándares de calidad HELLVEX." },
+            { id: 5, title: "Diseño 5 - Cruz Eterna-blanco", priceUSD: 13.50, category: "camisetas", image: "Cruz Eterna-blanco.jpg", description: "Diseño 5 - Cruz Eterna. Estilo: Minimal / Dark. Confeccionada con altos estándares de calidad HELLVEX." },
+            { id: 6, title: "Diseño 6 - Ángel Caído", priceUSD: 13.50, category: "camisetas", image: "Ángel Caído-blanco.jpg", description: "Diseño 6 - Ángel Caído. Estilo: Gráfico / Arte / Oscuro. Confeccionada con altos estándares de calidad HELLVEX." }
+        ];
+
+        let selectedSize = "M";
+        let quantity = 1;
+        let showingWishlistOnly = false;
+
+        function formatMoney(amountUSD) {
+            let currencyInfo = rates[currentCurrency];
+            let converted = amountUSD * currencyInfo.rate;
+            if (currentCurrency === 'COP') {
+                return `${currencyInfo.symbol} ${Math.round(converted).toLocaleString()} COP`;
+            } else {
+                return `${currencyInfo.symbol}${converted.toFixed(2)} ${currentCurrency}`;
+            }
+        }
+
+        function changeGlobalCurrency() {
+            currentCurrency = document.getElementById('headerCurrencySelector').value;
+            localStorage.setItem('storeCurrency', currentCurrency);
+            renderProducts(products);
+            showToast(`Moneda cambiada a ${currentCurrency}`);
+        }
+
+        function getWishlist() {
+            return JSON.parse(localStorage.getItem('wishlistProducts')) || [];
+        }
+
+        function toggleWishlist(id, event) {
+            event.stopPropagation();
+            let wishlist = getWishlist();
+            let index = wishlist.indexOf(id);
+            if (index > -1) {
+                wishlist.splice(index, 1);
+                showToast("Eliminado de Favoritos");
+            } else {
+                wishlist.push(id);
+                showToast("¡Añadido a Favoritos! ❤️");
+            }
+            localStorage.setItem('wishlistProducts', JSON.stringify(wishlist));
+            updateWishlistCounter();
+            renderProducts(products);
+        }
+
+        function updateWishlistCounter() {
+            let wishlist = getWishlist();
+            document.getElementById('wishlistCounter').innerText = wishlist.length;
+        }
+
+        function toggleWishlistFilter() {
+            showingWishlistOnly = !showingWishlistOnly;
+            document.getElementById('catalogTitle').innerText = showingWishlistOnly ? "Mis Favoritos ❤️" : "Nuevos Ingresos";
+            renderProducts(products);
+        }
+
+        function renderProducts(productsList) {
+            const grid = document.getElementById('productsGrid');
+            grid.innerHTML = "";
+            let wishlist = getWishlist();
+
+            let filtered = productsList;
+            if (showingWishlistOnly) {
+                filtered = productsList.filter(p => wishlist.includes(p.id));
+            }
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<p style="grid-column: 1/-1; text-align: center; padding: 20px;">${showingWishlistOnly ? "Aún no has agregado productos a tus favoritos." : "No se encontraron productos."}</p>`;
+                return;
+            }
+
+            filtered.forEach(product => {
+                let formattedPrice = formatMoney(product.priceUSD);
+                let isFav = wishlist.includes(product.id);
+                grid.innerHTML += `
+                    <div class="product-card clickable" onclick="openModal(${product.id})">
+                        <button class="wishlist-heart-btn ${isFav ? 'active' : ''}" onclick="toggleWishlist(${product.id}, event)">♥</button>
+                        <img src="${product.image}" alt="${product.title}" class="product-image">
+                        <div class="product-info">
+                            <div class="product-stars">★★★★★</div>
+                            <div class="product-title">${product.title}</div>
+                            <div class="product-price">${formattedPrice}</div>
+                            <button class="product-btn" onclick="event.stopPropagation(); openModal(${product.id});">Ver y Elegir Talla</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        renderProducts(products);
+        updateCartCounter();
+        updateWishlistCounter();
+
+        function setTheme(themeName) {
+            document.body.className = themeName;
+            localStorage.setItem('storeTheme', themeName);
+            document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function filterProducts(category, event) {
+            showingWishlistOnly = false;
+            document.getElementById('catalogTitle').innerText = "Nuevos Ingresos";
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            if (category === 'all') {
+                renderProducts(products);
+            } else {
+                renderProducts(products.filter(p => p.category === category));
+            }
+        }
+
+        function searchProducts() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            renderProducts(products.filter(p => p.title.toLowerCase().includes(query) || p.description.toLowerCase().includes(query)));
+        }
+
+        function openModal(id) {
+            const product = products.find(p => p.id === id);
+            if (product) {
+                document.getElementById('modalImg').src = product.image;
+                document.getElementById('modalTitle').innerText = product.title;
+                document.getElementById('modalPrice').innerText = formatMoney(product.priceUSD);
+                document.getElementById('modalDesc').innerText = product.description;
+                selectSize("M");
+                quantity = 1;
+                document.getElementById('modalQty').innerText = quantity;
+                document.getElementById('modalAddToCart').onclick = function() {
+                    addToCart(product.id, selectedSize, quantity, product.priceUSD);
+                    closeModal();
+                };
+                document.getElementById('productModal').style.display = 'flex';
+            }
+        }
+
+        function selectSize(size) {
+            selectedSize = size;
+            document.querySelectorAll('.size-box').forEach(box => box.classList.remove('selected'));
+            document.getElementById(`size-${size}`).classList.add('selected');
+        }
+
+        function changeQty(amount) {
+            quantity += amount;
+            if (quantity < 1) quantity = 1;
+            document.getElementById('modalQty').innerText = quantity;
+        }
+
+        function closeModal() { document.getElementById('productModal').style.display = 'none'; }
+        window.onclick = function(e) { if (e.target === document.getElementById('productModal')) closeModal(); }
+
+        function addToCart(id, size, qty, priceUSD) {
+            const product = products.find(p => p.id === id);
+            if (product) {
+                let cart = JSON.parse(localStorage.getItem('cartProducts')) || [];
+                let existingIndex = cart.findIndex(item => item.title === product.title && item.size === size);
+                if (existingIndex > -1) {
+                    cart[existingIndex].quantity = (cart[existingIndex].quantity || 1) + qty;
+                } else {
+                    cart.push({ title: product.title, priceUSD: priceUSD, image: product.image, size: size, quantity: qty });
+                }
+                localStorage.setItem('cartProducts', JSON.stringify(cart));
+                updateCartCounter();
+                showToast(`¡${qty}x "${product.title}" (Talla: ${size}) añadido!`);
+            }
+        }
+
+        function updateCartCounter() {
+            let cart = JSON.parse(localStorage.getItem('cartProducts')) || [];
+            document.getElementById('cartCounter').innerText = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toastNotification');
+            document.getElementById('toastMessage').innerText = message;
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 3000);
+        }
+    </script>
+</body>
+</html>
